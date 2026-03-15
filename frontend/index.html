@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlayerPulse</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #081b2f;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin-top: 30px;
+      font-size: 48px;
+    }
+
+    h3 {
+      margin-top: -10px;
+      margin-bottom: 30px;
+      font-weight: 600;
+    }
+
+    .container {
+      width: 80%;
+      margin: auto;
+      padding-bottom: 40px;
+    }
+
+    .card {
+      background: #132c46;
+      padding: 30px;
+      border-radius: 12px;
+      margin: 20px 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    select {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px;
+      border-radius: 6px;
+      border: none;
+      min-width: 220px;
+    }
+
+    #chart {
+      width: 100%;
+      min-height: 450px;
+    }
+
+    .selectors {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .chart-controls {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    .leaderboard-controls {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      color: white;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #274c70;
+      text-align: left;
+    }
+
+    th {
+      background: #0f2238;
+    }
+
+    tr:hover {
+      background: #193754;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚾ PlayerPulse</h1>
+  <h3>MLB Player Performance Analytics Dashboard (2015–2025)</h3>
+
+  <div class="container">
+    <div class="card">
+      <h2>Select Players</h2>
+
+      <div class="selectors">
+        <div>
+          <label for="player1">Player 1</label>
+          <select id="player1"></select>
+        </div>
+
+        <div>
+          <label for="player2">Player 2</label>
+          <select id="player2"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Career Player Comparison</h2>
+
+      <div class="chart-controls">
+        <label for="chartStat">Select Stat:</label>
+        <select id="chartStat">
+          <option value="OPS">OPS</option>
+          <option value="HR">Home Runs</option>
+          <option value="RBI">RBI</option>
+          <option value="WAR">WAR</option>
+          <option value="BA">Batting Avg</option>
+        </select>
+      </div>
+
+      <div id="chart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Top Players Leaderboard</h2>
+
+      <div class="leaderboard-controls">
+        <div>
+          <label for="statSelect">Stat</label>
+          <select id="statSelect">
+            <option value="HR">Home Runs</option>
+            <option value="RBI">RBI</option>
+            <option value="OPS">OPS</option>
+            <option value="WAR">WAR</option>
+            <option value="BA">Batting Average</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="yearSelect">Year</label>
+          <select id="yearSelect">
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+            <option value="2020">2020</option>
+            <option value="2019">2019</option>
+            <option value="2018">2018</option>
+            <option value="2017">2017</option>
+            <option value="2016">2016</option>
+            <option value="2015">2015</option>
+          </select>
+        </div>
+      </div>
+
+      <table id="leaderboardTable">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Team</th>
+            <th>Year</th>
+            <th id="statHeader">HR</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+
+    async function loadPlayers() {
+      const res = await fetch(`${API}/players`);
+      const data = await res.json();
+
+      const player1Select = document.getElementById("player1");
+      const player2Select = document.getElementById("player2");
+
+      player1Select.innerHTML = "";
+      player2Select.innerHTML = "";
+
+      data.players.forEach((player) => {
+        const option1 = document.createElement("option");
+        option1.value = player;
+        option1.textContent = player;
+        player1Select.appendChild(option1);
+
+        const option2 = document.createElement("option");
+        option2.value = player;
+        option2.textContent = player;
+        player2Select.appendChild(option2);
+      });
+
+      const bryceIndex = data.players.findIndex(
+        (p) => p.toLowerCase().includes("bryce harper")
+      );
+      const judgeIndex = data.players.findIndex(
+        (p) => p.toLowerCase().includes("aaron judge")
+      );
+
+      player1Select.selectedIndex = bryceIndex >= 0 ? bryceIndex : 0;
+      player2Select.selectedIndex = judgeIndex >= 0 ? judgeIndex : 1;
+
+      loadComparison();
+    }
+
+    async function loadComparison() {
+      const player1 = document.getElementById("player1").value;
+      const player2 = document.getElementById("player2").value;
+      const stat = document.getElementById("chartStat").value;
+
+      const res = await fetch(
+        `${API}/compare?player1=${encodeURIComponent(player1)}&player2=${encodeURIComponent(player2)}`
+      );
+      const data = await res.json();
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      const years1 = data.player1_stats.map((d) => d.Year);
+      const stat1 = data.player1_stats.map((d) => d[stat]);
+
+      const years2 = data.player2_stats.map((d) => d.Year);
+      const stat2 = data.player2_stats.map((d) => d[stat]);
+
+      const trace1 = {
+        x: years1,
+        y: stat1,
+        type: "scatter",
+        mode: "lines+markers",
+        name: player1
+      };
+
+      const trace2 = {
+        x: years2,
+        y: stat2,
+        type: "scatter",
+        mode: "lines+markers",
+        name: player2
+      };
+
+      const layout = {
+        title: `${player1} vs ${player2} - ${stat} Over Time`,
+        paper_bgcolor: "#132c46",
+        plot_bgcolor: "#132c46",
+        font: { color: "white" },
+        xaxis: {
+          title: "Year",
+          gridcolor: "#1f3d5a"
+        },
+        yaxis: {
+          title: stat,
+          gridcolor: "#1f3d5a"
+        }
+      };
+
+      Plotly.newPlot("chart", [trace1, trace2], layout, { responsive: true });
+    }
+
+    async function loadLeaderboard() {
+      const stat = document.getElementById("statSelect").value;
+      const year = document.getElementById("yearSelect").value;
+
+      const res = await fetch(
+        `${API}/top?stat=${encodeURIComponent(stat)}&year=${encodeURIComponent(year)}&limit=10`
+      );
+      const data = await res.json();
+
+      const tbody = document.querySelector("#leaderboardTable tbody");
+      const statHeader = document.getElementById("statHeader");
+
+      tbody.innerHTML = "";
+      statHeader.textContent = stat;
+
+      if (data.error) {
+        tbody.innerHTML = `<tr><td colspan="5">${data.error}</td></tr>`;
+        return;
+      }
+
+      data.leaders.forEach((player, index) => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${player.Player}</td>
+          <td>${player.Team}</td>
+          <td>${player.Year}</td>
+          <td>${player[stat]}</td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    }
+
+    document.getElementById("player1").addEventListener("change", loadComparison);
+    document.getElementById("player2").addEventListener("change", loadComparison);
+    document.getElementById("chartStat").addEventListener("change", loadComparison);
+    document.getElementById("statSelect").addEventListener("change", loadLeaderboard);
+    document.getElementById("yearSelect").addEventListener("change", loadLeaderboard);
+
+    loadPlayers();
+    loadLeaderboard();
+  </script>
+</body>
+</html>
